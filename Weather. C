@@ -1,0 +1,173 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX 50
+
+struct node {
+    char city[50];
+    float temp, humidity, wind;
+    struct node *next;
+};
+
+struct node *head = NULL;
+
+struct queue {
+    float data[MAX];
+    int front, rear;
+};
+
+void initQueue(struct queue *q) {
+    q->front = q->rear = -1;
+}
+
+void enqueue(struct queue *q, float val) {
+    if(q->rear == MAX-1) return;
+    if(q->front == -1) q->front = 0;
+    q->data[++q->rear] = val;
+}
+
+void displayQueue(struct queue *q) {
+    if(q->front == -1) return;
+    for(int i=q->front; i<=q->rear; i++)
+        printf("%.1f ", q->data[i]);
+}
+
+void addCity() {
+    struct node *newNode = (struct node*)malloc(sizeof(struct node));
+
+    printf("City: ");
+    scanf("%s", newNode->city);
+
+    printf("Temperature: ");
+    scanf("%f", &newNode->temp);
+
+    printf("Humidity: ");
+    scanf("%f", &newNode->humidity);
+
+    printf("Wind Speed: ");
+    scanf("%f", &newNode->wind);
+
+    newNode->next = head;
+    head = newNode;
+}
+
+void display() {
+    struct node *temp = head;
+
+    while(temp) {
+        printf("\n%s -> T:%.1f H:%.1f W:%.1f",
+               temp->city, temp->temp,
+               temp->humidity, temp->wind);
+        temp = temp->next;
+    }
+}
+
+char* forecast(struct node *n) {
+    int sunny = 0, rainy = 0, storm = 0, cloudy = 0;
+
+    if(n->temp > 30) sunny += 3;
+    else cloudy += 2;
+
+    if(n->humidity > 75) rainy += 4;
+    else if(n->humidity > 50) cloudy += 2;
+
+    if(n->wind > 30) storm += 5;
+    else if(n->wind > 15) cloudy += 1;
+
+    if(storm >= sunny && storm >= rainy && storm >= cloudy)
+        return "STORM";
+    else if(rainy >= sunny && rainy >= cloudy)
+        return "RAINY";
+    else if(sunny >= cloudy)
+        return "SUNNY";
+    else
+        return "CLOUDY";
+}
+
+void processForecast() {
+    struct node *temp = head;
+
+    while(temp) {
+        printf("\n%s => %s",
+               temp->city,
+               forecast(temp));
+        temp = temp->next;
+    }
+}
+
+void simulateHourly() {
+    struct node *temp = head;
+
+    while(temp) {
+        struct queue q;
+        initQueue(&q);
+
+        float base = temp->temp;
+
+        for(int i=0; i<5; i++) {
+            float variation = (rand() % 5) - 2; // -2 to +2
+            enqueue(&q, base + variation);
+        }
+
+        printf("\n\n%s Hourly Temps: ", temp->city);
+        displayQueue(&q);
+
+        temp = temp->next;
+    }
+}
+
+void save() {
+    FILE *fp = fopen("weather.txt", "w");
+    struct node *temp = head;
+
+    while(temp) {
+        fprintf(fp, "%s %.1f %.1f %.1f\n",
+                temp->city,
+                temp->temp,
+                temp->humidity,
+                temp->wind);
+        temp = temp->next;
+    }
+    fclose(fp);
+}
+
+void load() {
+    FILE *fp = fopen("weather.txt", "r");
+    if(!fp) return;
+
+    while(!feof(fp)) {
+        struct node *newNode = malloc(sizeof(struct node));
+
+        if(fscanf(fp, "%s %f %f %f",
+                  newNode->city,
+                  &newNode->temp,
+                  &newNode->humidity,
+                  &newNode->wind) != 4)
+            break;
+
+        newNode->next = head;
+        head = newNode;
+    }
+
+    fclose(fp);
+}
+
+int main() {
+    int ch;
+
+    load();
+
+    while(1) {
+        printf("\n\n1.Add City\n2.Display\n3.Forecast\n4.Hourly Simulation\n5.Save & Exit\nChoice: ");
+        scanf("%d", &ch);
+
+        switch(ch) {
+            case 1: addCity(); break;
+            case 2: display(); break;
+            case 3: processForecast(); break;
+            case 4: simulateHourly(); break;
+            case 5: save(); exit(0);
+        }
+    }
+}
